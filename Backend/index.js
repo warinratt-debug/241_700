@@ -1,14 +1,119 @@
-<<<<<<< HEAD
 const express = require('express');
 const bodyParser = require('body-parser');
+const mysql = require('mysql2/promise')
 const app = express();
 
 app.use(bodyParser.json());
 
 const port = 8000;
 
-let users = [];
+let conn = null;
+const initMYSQL = async () => {
+    conn = await mysql.createConnection({
+        host: 'localhost',
+        user: 'root',
+        password: 'root',
+        database: 'webdb',
+        port: 8700
+    });
+    console.log('Connected to MYSQL database')
+}
+
+// path: = GET /users สำหรับดึงข้อมูล users ทั้งหมด
+app.get('/users', async (req, res) => {
+    const results = await conn.quert('SELECT * FROM users');
+    res.json(results[0]);
+});
+
+//path: = POST /users สำหรับเพิ่ม user ใหม่
+app.post('/users', async (req, res) => {
+    try {
+        let user = req.body;
+        const results = await conn.query('INSERT INTO users SET ?', user)
+        res.json({
+            message: 'User created successfully',
+            data: results[0]
+        })
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({
+            message: 'Error creating user',
+            error: error.message
+        });
+    }
+});
+
+
+//path: = GET /users/:id สำหรับดึงข้อมูล user ตาม id 
+app.get('/users/:id', async (req, res) => {
+    try {
+        let id = req.params.id
+        const results = await conn.query('SELECT * FROM users WHERE id = ?', id)
+        if (results[0].length == 0) {
+            throw { statusCode: 404, message: 'User not found' };
+        }
+        res.json(results[0][0]);
+    }
+    catch (error) {
+        console.error('Error fetching user:', error.message);
+        let statusCode = error.statusCode || 500;
+        res.status(statusCode).json({
+            message: 'Error fetching user',
+            error: error.message
+        });
+    }
+})
+
+//path: = PUT /users/:id สำหรับอัพเดทข้อมูล user ตาม id
+app.put('/users/:id', async (req, res) => {
+    try {
+        let id = req.params.id
+        let updatedUser = req.body;
+        const results = await conn.query('UPDATE users SET ? WHERE id = ?', [updatedUser, id])
+        if (results[0].affectedRows == 0) {
+            throw { statusCode: 404, message: 'User not found' };
+        }
+        res.json({
+            message: 'User updated successfully',
+            data: updatedUser
+        });
+    }
+    catch (error) {
+        console.error('Error updating user:', error.message);
+        let statusCode = error.statusCode || 500;
+        res.status(statusCode).json({
+            message: 'Error updating user',
+            error: error.message
+        });
+    }
+})
+
+// DELETE /users/:id สำหรับลบ user ที่มี id ตรงกับที่ส่งมา
+app.delete('/users/:id', async (req, res) => {
+    try {
+        let id = req.params.id
+        const results = await conn.query('DELETE FROM users WHERE id = ?', id)
+        if (results[0].affectedRows == 0) {
+            throw { statusCode: 404, message: 'User not found' };
+        }   
+        res.json({
+            message: 'User deleted successfully'
+        });
+    }
+    catch (error) {
+        console.error('Error deleting user:', error.message);
+        let statusCode = error.statusCode || 500;
+        res.status(statusCode).json({
+            message: 'Error deleting user',
+            error: error.message
+        });
+    }
+})
+
+
+/**let users = [];
 let counter = 1;
+*/
 /**
  *GET /users - ดึงข้อมูลผู้ใช้ท้ังหมด
  POST /users - เพิ่มผู้ใช้ใหม่
@@ -16,7 +121,7 @@ let counter = 1;
  PUT /users/:id -แก้ไขข้อมูลผู้ใช้ตาม ID ที่บันทึก
  DELETE /users/:id - ลบผู้ใช้ตาม ID ที่บันทึก
  */
-
+/*
 // path: = GET / users
 app.get('/users', (req, res) => {
     res.json(users);
@@ -75,24 +180,9 @@ app.delete('/users/:id', (req, res) => {
     });
 
 })
+*/
 
-app.listen(port, () => {
+app.listen(port, async () => {
+    await initMYSQL();
     console.log(`Server is running on http://localhost:${port}`);
-=======
-// ทำการ import โมดูล http
-const http = require('http');
-const host = 'localhost';
-const port = 8000;
-
-//กำหนดค่า server
-
-const requireListener = function (req, res){
-    res.writeHead(200);
-    res.end('Hello, WOrld! This is my first server.');
-}
-//run server
-const server = http.createServer(requireListener);
-server.listen(port, host, () => {
-    console.log(`server is running on http://${host}:${port}`);
->>>>>>> 577266d1a2409a1a7fe1f9420bacf6cf907734dd
 });
