@@ -1,80 +1,84 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-
-app.use(bodyParser.json());
-
-const port = 8000;
-
-let users = [];
-let counter = 1;
-/**
- *GET /users - ดึงข้อมูลผู้ใช้ท้ังหมด
- POST /users - เพิ่มผู้ใช้ใหม่
- GET /users/:id - ดึงข้อมูลผู้ใช้ตาม ID
- PUT /users/:id -แก้ไขข้อมูลผู้ใช้ตาม ID ที่บันทึก
- DELETE /users/:id - ลบผู้ใช้ตาม ID ที่บันทึก
- */
-
-// path: = GET / users
-app.get('/users', (req, res) => {
-    res.json(users);
-});
-
-//path: = POST /user
-app.post('/user', (req, res) => {
-    let user = req.body;
-    user.id = counter
-    counter += 1;
-
-    users.push(user);
-    res.json({
-    message: 'User added successfully',
-    user: user
-    });
-});
-
-// path: = PUT /user/:id
-app.patch('/user/:id', (req, res) => {
-    let id = req.params.id;
-    let updateUser = req.body;
-
-    // หา user ทีจาก id ที่ส่งมา
-    let selectedIndex = users.findIndex(user => user.id == id);
-
-    // อัพเดทข้อมูล users
-    if (updateUser.fname) {
-        users[selectedIndex].fname = updateUser.fname;
+const validateData = (userData) => {
+    let errors = [];
+    if (!userData.firstName) {
+        errors.push('กรุณากรอกชื่อ');
     }
-    if (updateUser.lname) {
-        users[selectedIndex].lname = updateUser.lname;
+    if (!userData.lastName) {
+        errors.push('กรุณากรอกนามสกุล');
     }
+    if (!userData.age) {
+        errors.push('กรุณากรอกอายุ');
+    }
+    if (!userData.gender) {
+        errors.push('กรุณาเลือกเพศ');
+    }
+    if (!userData.interests) {
+        errors.push('กรุณาเลือกงานอดิเรก');
+    }
+    if (!userData.description) {
+        errors.push('กรุณากรอกคำอธิบาย');
+    }
+    return errors;
+}
 
-    res.json({
-        message: 'User updated successfully',
-        data: {
-            user: updateUser,
-            indexUpdate: selectedIndex
+
+const submitData = async () => {
+    let firstNameDOM = document.querySelector('input[name=firstname]');
+    let lastNameDOM = document.querySelector('input[name=lastname]');
+    let ageDOM = document.querySelector('input[name=age]');
+    let genderDOM = document.querySelector('input[name=gender]:checked') || {};
+    let interestDOMs = document.querySelectorAll('input[name=interests]:checked') || {};
+    let descriptionDOM = document.querySelector('textarea[name=description]');
+
+    let messageDom = document.getElementById('message')
+    try {
+    let interest = ''
+        for (let i = 0; i < interestDOMs.length; i++) {
+        interest += interestDOMs[i].value
+        if (i != interestDOMs.length - 1) {
+            interest += ','
         }
-    });
-    // ส่ง users ที่อัพเดทแล้วกลับไป
-})
+    }
 
-app.delete('/users/:id', (req, res) => {
-    let id = req.params.id;
-    // หา index จาก id ที่ต้องการลบ
-      let selectedIndex = users.findIndex(user => user.id == id);
+    let userData ={
+        firstName: firstNameDOM.value,
+        lastName: lastNameDOM.value,
+        age: ageDOM.value,
+        gender: genderDOM.value,
+        description: descriptionDOM.value,
+        interests: interest
+    }
+    console.log('submitData', userData);
 
-    // ลบ user ออกจาก users
-    users.splice(selectedIndex, 1);
+    const errors = validateData(userData);
+    if (errors.length > 0){
+        throw {
+            message: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+            errors: errors
+        }
+    }
 
-    res.json({
-        message: 'User deleted successfully',
-        indexDelete: selectedIndex
-    });
+        const response = await axios.post('http://localhost:8000/users', userData);
+        console.log('response',response);
+        messageDom.innerText = 'บันทึกข้อมูลสำเร็จ';
+        messageDom.className = 'message success';
+    }catch (error) {
+        console.log('error message',error.message);
+        console.log('error details',error.error);
+        //if (error.response) {
+       //     console.error('Error response:', error.response.data.message);
+       // }
+       let htmlData = '<div>'
+       htmlData += `<div>${error.message}</div>`;
+       htmlData += '<ul>';
+       for (let i = 0; i < error.errors.length; i++){
+        htmlData += `<li>${error.errors[i]}</li>`;
+       }
+       htmlData += '</ul>'
+       htmlData += '</div>';
 
-})
-
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+        messageDom.innerHTML = htmlData;
+        messageDom.className = 'message danger';
+    }
+     
+}
