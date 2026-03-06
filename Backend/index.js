@@ -2,8 +2,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise')
 const app = express();
+const cors = require('cors');
 
 app.use(bodyParser.json());
+
+app.use(cors());
 
 const port = 8000;
 
@@ -21,7 +24,7 @@ const initMYSQL = async () => {
 
 // path: = GET /users สำหรับดึงข้อมูล users ทั้งหมด
 app.get('/users', async (req, res) => {
-    const results = await conn.quert('SELECT * FROM users');
+    const results = await conn.query('SELECT * FROM users');
     res.json(results[0]);
 });
 
